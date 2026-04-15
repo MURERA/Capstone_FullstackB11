@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+env311/
+
+# Node
+node_modules/
+
+# ML model
+ml/model/
+ml/saved_model/
+
+# Results
+ml/results/
+
+# Environment file
+.env
+
+# Jupyter
+.ipynb_checkpoints/
