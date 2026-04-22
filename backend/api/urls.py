@@ -1,9 +1,10 @@
 from django.urls import path
-from .views import test_api, predict_api, news_api
+from .views import HomeView, PredictMultiView, HistoryView, NewsView
 
 
 urlpatterns = [
-    path("test/", test_api),
-    path("predict/", predict_api),
-    path("news/", news_api),
+    path('', HomeView.as_view()),
+    path('predict-multi/', PredictMultiView.as_view()),
+    path('history/', HistoryView.as_view()),
+    path('news/', NewsView.as_view()),
 ]
