@@ -1,22 +1,63 @@
-# Python
+# ========================
+# PYTHON / DJANGO
+# ========================
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.sqlite3
 
-# Virtual environment
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# ========================
+# ENVIRONMENT
+# ========================
+env/
 env311/
+venv/
+.venv/
 
-# Node
+# ========================
+# NODE / REACT
+# ========================
 node_modules/
+build/
+dist/
 
-# ML model
+# ========================
+# ML FILES (BERAT)
+# ========================
 ml/model/
 ml/saved_model/
-
-# Results
 ml/results/
+ml/dataset/
 
-# Environment file
+# ========================
+# NOTEBOOK
+# ========================
+.ipynb_checkpoints/
+
+# ========================
+# ENV FILE (RAHASIA)
+# ========================
 .env
 
-# Jupyter
-.ipynb_checkpoints/
+# ========================
+# VS CODE / EDITOR
+# ========================
+.vscode/
+.idea/
+
+# ========================
+# LOG FILES
+# ========================
+*.log
+
+# ========================
+# OS FILES
+# ========================
+.DS_Store
+Thumbs.db
