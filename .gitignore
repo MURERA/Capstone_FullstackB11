@@ -2,9 +2,7 @@
 # PYTHON / DJANGO
 # ========================
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
 *.sqlite3
 
 # Django
@@ -15,6 +13,8 @@ staticfiles/
 # ========================
 # ENVIRONMENT
 # ========================
+.env
+.env.*
 env/
 env311/
 venv/
@@ -28,7 +28,7 @@ build/
 dist/
 
 # ========================
-# ML FILES (BERAT)
+# ML FILES
 # ========================
 ml/model/
 ml/saved_model/
@@ -41,15 +41,11 @@ ml/dataset/
 .ipynb_checkpoints/
 
 # ========================
-# ENV FILE (RAHASIA)
-# ========================
-.env
-
-# ========================
-# VS CODE / EDITOR
+# EDITOR
 # ========================
 .vscode/
 .idea/
+*.swp
 
 # ========================
 # LOG FILES
@@ -57,7 +53,18 @@ ml/dataset/
 *.log
 
 # ========================
+# TEST / COVERAGE
+# ========================
+.coverage
+htmlcov/
+
+# ========================
 # OS FILES
 # ========================
 .DS_Store
 Thumbs.db
+
+# ========================
+# PYTHON PACKAGE
+# ========================
+*.egg-info/
