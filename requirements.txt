@@ -1,3 +1,4 @@
+#ml
 torch
 transformers
 datasets
@@ -5,6 +6,8 @@ scikit-learn
 pandas
 numpy
 tqdm
-
+#backend
 django==4.2
 requests
+djangorestframework>=3.14
+djangorestframework-simplejwt>=5.3
