@@ -11,7 +11,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 sys.path.append(BASE_DIR)
 
 from .models import History
-from ml.predict import predict_text
+from ml.predict import predict_multiple 
 
 
 class HomeView(APIView):
@@ -28,47 +28,19 @@ class PredictMultiView(APIView):
         if not answers or not isinstance(answers, list):
             return Response({"error": "answers harus berupa list"}, status=400)
 
-        total_score = 0
-        detail_results = []
+        #  PAKAI HYBRID ENGINE
+        result = predict_multiple(answers)
 
-        for text in answers:
-            result = predict_text(text)
-
-            negative = result.get("negative", 0)
-            neutral = result.get("neutral", 0)
-
-            if negative > 0.6:
-                score = 2
-            elif neutral > 0.5:
-                score = 1
-            else:
-                score = 0
-
-            total_score += score
-            detail_results.append(result)
-
-        if total_score <= 3:
-            category = "Normal"
-        elif total_score <= 6:
-            category = "Mild"
-        elif total_score <= 10:
-            category = "Moderate"
-        else:
-            category = "Severe"
-
+        #  SIMPAN KE DATABASE
         History.objects.create(
             user=request.user,
             answers=answers,
-            total_score=total_score,
-            category=category,
-            result_detail=detail_results
+            total_score=result.get("total_score"),
+            category=result.get("category"),
+            result_detail=result.get("details")
         )
 
-        return Response({
-            "total_score": total_score,
-            "category": category,
-            "detail": detail_results
-        })
+        return Response(result)
 
 
 class HistoryView(APIView):
@@ -91,26 +63,70 @@ class HistoryView(APIView):
 
 class NewsView(APIView):
     def get(self, request):
+        category = request.GET.get("category", "").lower()
+
+        # 🔥 mapping kategori → query yang lebih spesifik
+        if category == "minimal":
+            query = "mental wellness tips OR self care habits"
+        elif category == "mild":
+            query = "stress management tips OR relaxation techniques"
+        elif category == "moderate":
+            query = "anxiety coping strategies OR mental health help"
+        elif category == "severe":
+            query = "depression help therapy support mental health recovery"
+        else:
+            query = "mental health tips"
+
         url = "https://newsapi.org/v2/everything"
 
         params = {
-            "q": "mental health OR stress OR anxiety",
+            "q": query,
             "language": "en",
-            "sortBy": "publishedAt",
+            "sortBy": "relevancy",
+            "pageSize": 10,
             "apiKey": settings.NEWS_API_KEY
         }
 
         response = requests.get(url, params=params)
         data = response.json()
 
-        articles = []
+        # 🔥 FILTER biar tidak random / politik / noise
+        keywords = [
+            "tips", "how", "guide", "therapy", "coping",
+            "help", "mental", "health", "stress", "anxiety"
+        ]
 
-        for article in data.get("articles", [])[:5]:
-            articles.append({
-                "title": article["title"],
-                "description": article["description"],
-                "url": article["url"],
-                "image": article["urlToImage"]
-            })
+        filtered_articles = []
 
-        return Response({"articles": articles})
+        for article in data.get("articles", []):
+            title = (article.get("title") or "").lower()
+            desc = (article.get("description") or "").lower()
+
+            content = title + " " + desc
+
+            # 🔥 hanya ambil artikel yang relevan
+            if any(k in content for k in keywords):
+                # skip artikel yang terlalu "news" atau politik
+                if any(bad in content for bad in ["trump", "court", "law", "government"]):
+                    continue
+
+                filtered_articles.append({
+                    "title": article.get("title"),
+                    "description": article.get("description"),
+                    "url": article.get("url"),
+                    "image": article.get("urlToImage")
+                })
+
+        # 🔥 fallback kalau hasil kosong
+        if len(filtered_articles) == 0:
+            for article in data.get("articles", [])[:5]:
+                filtered_articles.append({
+                    "title": article.get("title"),
+                    "description": article.get("description"),
+                    "url": article.get("url"),
+                    "image": article.get("urlToImage")
+                })
+
+        return Response({
+            "articles": filtered_articles[:5]
+        })
