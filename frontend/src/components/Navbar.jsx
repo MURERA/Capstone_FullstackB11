@@ -1,9 +1,19 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useSettings } from "../contexts/SettingsContext";
+import { parseJwt } from "./AdminRoute";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const { theme, toggleTheme, language, toggleLanguage, t } = useSettings();
+
+  const token = localStorage.getItem("token");
+  let isAdmin = false;
+  if (token) {
+    try {
+      const decoded = parseJwt(token);
+      isAdmin = decoded && (decoded.role === 'admin' || decoded.role === 'superadmin');
+    } catch(e) {}
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -48,6 +58,16 @@ export default function Navbar() {
         >
           {t("navBreathing")}
         </button>
+
+        {isAdmin && (
+          <button
+            onClick={() => navigate("/admin")}
+            className="btn"
+            style={{ background: "var(--primary)", color: "white", padding: "0.5rem 1rem", borderRadius: "var(--radius-md)", fontWeight: "600" }}
+          >
+            Admin Panel
+          </button>
+        )}
         
         {/* Toggle Theme & Language */}
         <div style={{ display: "flex", gap: "0.5rem", borderLeft: "1px solid var(--border)", paddingLeft: "1rem", marginLeft: "0.5rem" }}>

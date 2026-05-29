@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../services/api";
+import { parseJwt } from "../components/AdminRoute";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -16,6 +17,18 @@ export default function Login() {
     try {
       const res = await API.post("/auth/login/", form);
       localStorage.setItem("token", res.data.access);
+      
+      // Cek apakah user adalah admin
+      try {
+        const decoded = parseJwt(res.data.access);
+        if (decoded && (decoded.role === 'admin' || decoded.role === 'superadmin')) {
+          navigate("/admin");
+          return;
+        }
+      } catch (e) {
+        console.error("Gagal membaca token", e);
+      }
+      
       navigate("/dashboard");
     } catch (err) {
       console.error(err);

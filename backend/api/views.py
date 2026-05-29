@@ -67,7 +67,7 @@ Rules for scoring:
 
 
     try:
-        if not settings.OPENROUTER_API_KEY:
+        if not getattr(settings, "OPENROUTER_API_KEY", None):
             raise Exception("OPENROUTER_API_KEY is not set in settings")
         # Prepare OpenRouter request
         openrouter_url = "https://openrouter.ai/api/v1/chat/completions"
@@ -93,14 +93,33 @@ Rules for scoring:
             # clean possible markdown fences
             content = content.replace("```json", "").replace("```", "").strip()
             return json.loads(content)
-    except Exception as e:
-        error_details = str(e)
-        return {
-            "total_score": 0,
-            "category": "Error",
-            "details": [],
-            "error": error_details
-        }
+    except Exception as or_error:
+        print("OpenRouter failed in predict_multiple, falling back to Gemini:", or_error)
+        try:
+            if not getattr(settings, "GEMINI_API_KEY", None):
+                raise Exception("GEMINI_API_KEY is not set in settings")
+            
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            model = genai.GenerativeModel(
+                model_name='gemini-2.5-flash',
+                system_instruction=system_prompt
+            )
+            response = model.generate_content(json.dumps(answers))
+            content = response.text
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                content = content.replace("```json", "").replace("```", "").strip()
+                return json.loads(content)
+        except Exception as gemini_error:
+            error_details = f"OpenRouter error: {str(or_error)}. Gemini error: {str(gemini_error)}."
+            return {
+                "total_score": 0,
+                "category": "Error",
+                "details": [],
+                "error": error_details
+            }
+
 
 
 # =========================
@@ -360,20 +379,44 @@ class NewsView(APIView):
         
         selected_indices = []
         
-        try:
-            llm_res = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=20)
-            if llm_res.status_code == 200:
-                llm_data = llm_res.json()
-                llm_text = llm_data["choices"][0]["message"]["content"]
-                
-                # Extract JSON array from text
-                import re
-                match = re.search(r'\[.*?\]', llm_text, re.DOTALL)
-                if match:
-                    selected_indices = json.loads(match.group())
-        except Exception as e:
-            print("LLM Filtering Error:", e)
-            pass
+        or_success = False
+        if openrouter_key:
+            try:
+                openrouter_url = "https://openrouter.ai/api/v1/chat/completions"
+                llm_res = requests.post(openrouter_url, headers=headers, json=payload, timeout=20)
+                if llm_res.status_code == 200:
+                    llm_data = llm_res.json()
+                    llm_text = llm_data["choices"][0]["message"]["content"]
+                    
+                    # Extract JSON array from text
+                    import re
+                    match = re.search(r'\[.*?\]', llm_text, re.DOTALL)
+                    if match:
+                        selected_indices = json.loads(match.group())
+                        or_success = True
+            except Exception as e:
+                print("OpenRouter News Filtering failed, trying Gemini:", e)
+
+        if not or_success:
+            try:
+                gemini_key = getattr(settings, "GEMINI_API_KEY", None)
+                if gemini_key:
+                    genai.configure(api_key=gemini_key)
+                    model = genai.GenerativeModel(
+                        model_name='gemini-2.5-flash',
+                        system_instruction=system_prompt
+                    )
+                    response = model.generate_content(llm_prompt)
+                    llm_text = response.text
+                    
+                    # Extract JSON array from text
+                    import re
+                    match = re.search(r'\[.*?\]', llm_text, re.DOTALL)
+                    if match:
+                        selected_indices = json.loads(match.group())
+            except Exception as e:
+                print("Gemini News Filtering fallback also failed:", e)
+
 
         # 3. APPLY SELECTION & FALLBACK
         final_articles = []
